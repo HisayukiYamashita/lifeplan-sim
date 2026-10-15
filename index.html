@@ -6,121 +6,137 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>老後資産シミュレーター</title>
 <meta name="description" content="家族構成・収入・支出・積立から、年齢ごとの収入と資産の推移を試算するライフプランシミュレーター">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
+/* デザイン：白×ピンクの経済メディア風（2026-10-15 共通デザイン）。印刷を考えて塗りは最小限、罫線で区切る */
 :root{
-  --bg:#f5f3ee; --panel:#ffffff; --panel2:#faf9f6; --line:#e3ded3; --line2:#efebe3;
-  --ink:#1f2a37; --sub:#6b7280; --navy:#1e3a5f; --navy2:#2c5282; --gold:#b7892f;
-  --green:#2f855a; --red:#c53030; --blue:#3b6ea5; --teal:#2c7a7b;
-  --radius:12px;
+  --ink:#111; --sub:#5f6368; --line:#e3e3e3; --accent:#ff9ecb;
+  --pos:#157f3b; --neg:#c2410c; --bg:#fff;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{font-family:"Noto Sans JP",-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;font-size:14px}
+body{font-family:"Inter","Noto Sans JP","Hiragino Sans",sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;font-size:14px;-webkit-font-smoothing:antialiased}
 .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
-header{background:var(--navy);color:#fff;padding:22px 0 18px;margin-bottom:20px}
-header h1{margin:0;font-size:22px;letter-spacing:.04em}
-header p{margin:4px 0 0;color:#c9d6e8;font-size:13px}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
-.btn:hover{border-color:var(--navy2)}
-header .btn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff}
-header .btn:hover{background:rgba(255,255,255,.2)}
-.btn.add{color:var(--navy2);border-style:dashed;font-size:12.5px}
+header{border-top:6px solid var(--ink);border-bottom:1px solid var(--ink);padding:28px 0 22px;margin-bottom:28px;background:#fff}
+.headrow{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.tag{display:inline-block;background:var(--accent);color:var(--ink);font-size:.75rem;font-weight:700;padding:2px 10px;letter-spacing:.06em}
+header h1{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;letter-spacing:-.01em;line-height:1.25;margin:10px 0 0}
+header .sub{font-size:.95rem;font-weight:700;margin:6px 0 0}
+header p.lead{font-size:.82rem;color:var(--sub);margin:6px 0 0}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{font:inherit;font-size:13px;font-weight:700;border:1.5px solid var(--ink);background:#fff;color:var(--ink);border-radius:4px;padding:6px 12px;cursor:pointer}
+.btn:hover{background:var(--accent)}
+#btnPrint{flex-shrink:0;padding:7px 14px}
+.btn.add{border-style:dashed;font-size:12.5px;font-weight:700}
 .btn.del{border:none;background:none;color:#9ca3af;font-size:16px;padding:2px 6px}
-.btn.del:hover{color:var(--red)}
+.btn.del:hover{color:var(--neg);background:none}
 
-.layout{display:grid;grid-template-columns:400px 1fr;gap:20px;align-items:start}
-@media(max-width:1000px){.layout{grid-template-columns:1fr}}
-.inputs{display:flex;flex-direction:column;gap:14px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
-.card h2{font-size:15px;margin:0 0 10px;color:var(--navy);display:flex;align-items:center;gap:8px}
-.card h2 .n{background:var(--navy);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
-.card h3{font-size:13px;margin:14px 0 6px;color:var(--sub);font-weight:500;border-top:1px solid var(--line2);padding-top:10px}
+.layout{display:grid;grid-template-columns:400px 1fr;gap:40px;align-items:start}
+@media(max-width:1000px){.layout{grid-template-columns:1fr;gap:24px}}
+.inputs{display:flex;flex-direction:column;gap:0}
+.card{padding:0 0 22px;margin-bottom:26px;border-bottom:1px solid var(--line)}
+.card h2, .conclusion h2{font-size:.78rem;font-weight:700;letter-spacing:.12em;color:var(--ink);border-top:2px solid var(--ink);padding-top:8px;margin:0 0 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 .n{font-variant-numeric:tabular-nums;font-weight:700;color:var(--sub)}
+.card h2 .n::after{content:"."}
+.card h3{font-size:12.5px;margin:16px 0 6px;color:var(--sub);font-weight:700;border-top:1px solid var(--line);padding-top:10px}
 .card h3:first-of-type{border-top:none;padding-top:0;margin-top:4px}
-.note{font-size:11.5px;color:var(--sub);margin:6px 0 0}
+.note{font-size:11.5px;color:var(--sub);margin:6px 0 0;letter-spacing:0}
 .f{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0}
 .f label{font-size:13px}
 .in{display:flex;align-items:center;gap:4px}
 .in span{font-size:12px;color:var(--sub);min-width:26px}
-input[type=number],input[type=text],select{font:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:6px;padding:5px 7px;background:var(--panel2);color:var(--ink)}
+input[type=number],input[type=text],select{font:inherit;font-size:14px;font-weight:600;border:none;border-bottom:1.5px solid #bdbdbd;border-radius:0;padding:5px 2px;background:transparent;color:var(--ink)}
 input[type=number]{width:86px;text-align:right;font-variant-numeric:tabular-nums}
 input[type=number].s{width:58px}
 input[type=text]{width:100%}
-input:focus,select:focus{outline:2px solid var(--navy2);outline-offset:-1px;background:#fff}
+input:focus,select:focus{outline:none;border-bottom-color:var(--ink)}
+input[type=checkbox]{accent-color:var(--ink)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
 .switch{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
 
-.list{display:flex;flex-direction:column;gap:8px}
-.item{border:1px solid var(--line2);background:var(--panel2);border-radius:8px;padding:8px 10px}
+.list{display:flex;flex-direction:column;gap:0}
+.item{border-bottom:1px solid var(--line);padding:10px 0}
+.item:first-child{border-top:1px solid var(--line)}
 .item .top{display:flex;gap:6px;align-items:center;margin-bottom:6px}
-.item .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.item .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 10px}
 .item .grid label{display:block;font-size:11px;color:var(--sub)}
 .item .grid input,.item .grid select{width:100%}
 .item .chk{font-size:11.5px;color:var(--sub);display:flex;align-items:center;gap:4px;margin-top:6px}
 
 table.edu{width:100%;border-collapse:collapse;font-size:12.5px}
-table.edu th,table.edu td{padding:3px 4px;border-bottom:1px solid var(--line2);text-align:right}
+table.edu th,table.edu td{padding:3px 4px;border-bottom:1px solid var(--line);text-align:right}
+table.edu th{font-size:11.5px;color:var(--sub);font-weight:500;border-bottom:1.5px solid var(--ink)}
 table.edu th:first-child,table.edu td:first-child{text-align:left}
 table.edu input{width:64px}
-details summary{cursor:pointer;font-size:13px;color:var(--navy2);margin-top:8px}
+details summary{cursor:pointer;font-size:13px;font-weight:700;margin-top:8px}
 
-.results{display:flex;flex-direction:column;gap:16px;min-width:0}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-@media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
-.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
-.kpi .l{font-size:12px;color:var(--sub)}
-.kpi .v{font-size:22px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1.3}
-.kpi .v small{font-size:12px;font-weight:500;color:var(--sub);margin-left:2px}
-.kpi .s{font-size:11.5px;color:var(--sub)}
-.kpi.bad .v{color:var(--red)}
-.kpi.good .v{color:var(--green)}
+.results{display:flex;flex-direction:column;gap:0;min-width:0}
+.conclusion{margin-bottom:30px}
+.conclusion .label{font-size:.85rem;color:var(--sub)}
+.conclusion .big{font-size:clamp(2.4rem,6vw,3.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+.conclusion .big .mark{background:linear-gradient(transparent 62%, var(--accent) 62%)}
+.conclusion .big small{font-size:.38em;font-weight:700;margin-left:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);margin-top:14px}
+.stats div{padding:12px 12px 4px 0}
+.stats div + div{border-left:1px solid var(--line);padding-left:14px}
+.stats span{display:block;font-size:.74rem;color:var(--sub)}
+.stats b{display:block;font-size:1.25rem;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.stats b small{font-size:.65em;font-weight:500;margin-left:2px}
+.stats em{display:block;font-style:normal;font-size:.72rem;color:var(--sub)}
+.conclusion .fine{font-size:.74rem;color:var(--sub);margin-top:8px}
+@media(max-width:560px){.stats{grid-template-columns:1fr}.stats div + div{border-left:none;border-top:1px solid var(--line);padding-left:0}}
+.pos{color:var(--pos)}
+.neg{color:var(--neg)}
+
 .chart-box{position:relative;height:340px}
-.tabs{display:flex;gap:4px;margin-bottom:10px}
-.tab{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel2);padding:5px 12px;border-radius:6px;cursor:pointer}
-.tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.tabs{display:flex;gap:18px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.tab{font:inherit;font-size:13px;font-weight:700;color:var(--sub);border:none;border-bottom:3px solid transparent;background:none;padding:4px 0 6px;margin-bottom:-1px;cursor:pointer}
+.tab.on{color:var(--ink);border-bottom-color:var(--accent)}
 
-.tbl-wrap{overflow:auto;max-height:640px;border:1px solid var(--line);border-radius:8px}
+.tbl-wrap{overflow:auto;max-height:640px;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
 table.cf{border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
-table.cf th,table.cf td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2)}
-table.cf thead th{position:sticky;top:0;background:var(--navy);color:#fff;z-index:2;font-weight:500}
-table.cf thead tr:nth-child(2) th{top:24px;background:var(--navy2)}
-table.cf th.lbl,table.cf td.lbl{position:sticky;left:0;background:#fff;text-align:left;z-index:1;min-width:150px;font-weight:500}
-table.cf thead th.lbl{z-index:3;background:var(--navy)}
-table.cf thead tr:nth-child(2) th.lbl{background:var(--navy2)}
-table.cf tr.sec td{background:#eef2f7;color:var(--navy);font-weight:700}
-table.cf tr.sec td.lbl{background:#eef2f7}
-table.cf tr.tot td{font-weight:700;background:#fbf8f1}
-table.cf tr.tot td.lbl{background:#fbf8f1}
-table.cf tr.big td{font-weight:700;background:#f3ecdc;color:var(--navy)}
-table.cf tr.big td.lbl{background:#f3ecdc}
-table.cf td.neg{color:var(--red)}
-table.cf td.ev{color:var(--gold);font-size:11px;text-align:left}
-table.cf th.retire{background:var(--gold)!important}
+table.cf th,table.cf td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--line)}
+table.cf thead th{position:sticky;top:0;background:#fff;color:var(--sub);z-index:2;font-weight:500;font-size:11.5px}
+table.cf thead tr:nth-child(2) th{top:24px;border-bottom:1.5px solid var(--ink)}
+table.cf th.lbl,table.cf td.lbl{position:sticky;left:0;background:#fff;text-align:left;z-index:1;min-width:150px;font-weight:500;border-right:1px solid var(--line)}
+table.cf thead th.lbl{z-index:3}
+table.cf tr.sec td{font-weight:700;border-top:1.5px solid var(--ink);padding-top:8px}
+table.cf tr.tot td{font-weight:700}
+table.cf tr.big td{font-weight:700;border-top:1.5px solid var(--ink)}
+table.cf tr.big td.lbl{box-shadow:inset 4px 0 0 var(--accent);padding-left:12px}
+table.cf td.neg{color:var(--neg)}
+table.cf td.ev{color:var(--sub);font-size:11px;text-align:left}
+table.cf th.retire{color:var(--ink);font-weight:700;box-shadow:inset 0 -4px 0 var(--accent)}
 table.cf td.lbl.ind{padding-left:18px;font-weight:400;color:#374151}
 .legend-note{font-size:11.5px;color:var(--sub);margin-top:8px}
-footer{color:var(--sub);font-size:11.5px;padding:24px 0 40px}
+footer{border-top:1px solid var(--ink);color:var(--sub);font-size:.75rem;padding-top:14px;padding-bottom:40px}
 
 @media print{
-  header .toolbar,.inputs,.tabs,.btn{display:none!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  header .toolbar,#btnPrint,.inputs,.tabs,.btn{display:none!important}
   body{background:#fff}
   .layout{grid-template-columns:1fr}
   .tbl-wrap{max-height:none;overflow:visible}
-  header{background:#fff;color:var(--navy);padding:0}
-  header p{color:var(--sub)}
-  .card,.kpi{break-inside:avoid}
+  header{padding:0 0 10px;border-top-width:4px;margin-bottom:12px}
+  header h1{font-size:1.5rem}
+  .conclusion .big{font-size:2.2rem}
+  .card,.conclusion{break-inside:avoid}
 }
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <h1>老後資産シミュレーター</h1>
-    <p>家族構成・収入・支出・積立を入れると、年齢ごとの収支と資産の推移を試算します（金額はすべて万円・手取りベース）</p>
+    <div class="headrow">
+      <span class="tag">老後資産 × ライフプラン</span>
+      <button class="btn" id="btnPrint">印刷・PDF保存</button>
+    </div>
+    <h1>いまの積立で、<br>老後のお金は何歳まで持つ？</h1>
+    <p class="sub">老後資産シミュレーター</p>
+    <p class="lead">家族構成・収入・支出・積立を入れると、年齢ごとの収支と資産の推移を試算します（金額はすべて万円・手取りベース）</p>
     <div class="toolbar">
-      <button class="btn" id="btnPrint">印刷・PDF</button>
       <button class="btn" id="btnExport">入力を保存（ファイル）</button>
       <button class="btn" id="btnImport">保存ファイルを読込</button>
       <button class="btn" id="btnReset">サンプルに戻す</button>
@@ -206,9 +222,10 @@ footer{color:var(--sub);font-size:11.5px;padding:24px 0 40px}
 
   <!-- ============ 結果 ============ -->
   <div class="results">
-    <div class="kpis" id="kpis"></div>
+    <div class="conclusion" id="kpis"></div>
 
     <div class="card">
+      <h2>資産と収支の推移</h2>
       <div class="tabs">
         <button class="tab on" data-chart="asset">資産の推移</button>
         <button class="tab" data-chart="cf">収入と支出</button>
@@ -220,14 +237,14 @@ footer{color:var(--sub);font-size:11.5px;padding:24px 0 40px}
     <div class="card">
       <h2>将来シミュレーション表<span class="note" style="margin:0 0 0 6px">（年末時点・単位：万円）</span></h2>
       <div class="tbl-wrap"><table class="cf" id="cfTable"></table></div>
-      <p class="legend-note">金色の列は夫の退職年。赤字はマイナス。</p>
+      <p class="legend-note">ピンクの下線の列は夫の退職年。赤い数字はマイナス。</p>
     </div>
   </div>
 </div>
 
 <footer class="wrap">
-  ※本シミュレーションは入力条件にもとづく概算で、将来の運用成果や制度内容を保証するものではありません。税金・社会保険料は手取り額の入力で簡略化しています。<br>
-  山下税理士事務所
+  山下税理士事務所 ｜ okanefuyasu.net ｜ 入力条件にもとづく概算シミュレーション<br>
+  ※将来の運用成果や制度内容を保証するものではありません。税金・社会保険料は手取り額の入力で簡略化しています。
 </footer>
 
 <script>
@@ -494,10 +511,15 @@ function renderKpis(rows){
   rows.forEach(r => { if (r.financial < min.financial) min = r; });
   const ageLabel = r => `夫${r.hAge}歳（${r.year}年）`;
   document.getElementById('kpis').innerHTML = `
-    <div class="kpi"><div class="l">退職時の金融資産</div><div class="v">${fmt(retire.financial)}<small>万円</small></div><div class="s">${ageLabel(retire)}</div></div>
-    <div class="kpi ${last.financial<0?'bad':'good'}"><div class="l">${last.hAge}歳時点の金融資産</div><div class="v">${fmt(last.financial)}<small>万円</small></div><div class="s">純資産 ${fmt(last.net)}万円</div></div>
-    <div class="kpi"><div class="l">金融資産が最も少ない年</div><div class="v">${fmt(min.financial)}<small>万円</small></div><div class="s">${ageLabel(min)}</div></div>
-    <div class="kpi ${short?'bad':'good'}"><div class="l">資金ショート</div><div class="v">${short ? short.hAge + '<small>歳</small>' : 'なし'}</div><div class="s">${short ? short.year + '年に現預金が不足' : `${last.hAge}歳まで資金は持ちます`}</div></div>`;
+    <h2>結論 ｜ ${last.hAge}歳までの資産の見通し</h2>
+    <div class="label">${last.hAge}歳時点の金融資産</div>
+    <div class="big ${last.financial<0?'neg':''}"><span class="mark">${fmt(last.financial)}</span><small>万円</small></div>
+    <div class="stats">
+      <div><span>退職時の金融資産</span><b>${fmt(retire.financial)}<small>万円</small></b><em>${ageLabel(retire)}</em></div>
+      <div><span>金融資産が最も少ない年</span><b>${fmt(min.financial)}<small>万円</small></b><em>${ageLabel(min)}</em></div>
+      <div><span>資金ショート</span><b class="${short?'neg':'pos'}">${short ? short.hAge + '<small>歳</small>' : 'なし'}</b><em>${short ? short.year + '年に現預金が不足' : `${last.hAge}歳まで資金は持ちます`}</em></div>
+    </div>
+    <p class="fine">${last.hAge}歳時点の純資産（不動産を含み、借入を差し引いた額） ${fmt(last.net)}万円。金融資産は現預金と積立・運用・保険の合計（不動産を除く）です。</p>`;
 }
 
 function renderChart(rows){
@@ -507,18 +529,18 @@ function renderChart(rows){
   if (chartMode === 'asset'){
     const invest = rows.map(r => r.financial - r.cash);
     data = { labels, datasets: [
-      { type:'bar', label:'現預金', data: rows.map(r=>Math.round(r.cash)), backgroundColor:'#7fa7cf', stack:'a' },
-      { type:'bar', label:'積立・運用・保険', data: invest.map(Math.round), backgroundColor:'#2c5282', stack:'a' },
-      { type:'bar', label:'不動産', data: rows.map(r=>Math.round(r.estate)), backgroundColor:'#d8c7a0', stack:'a' },
-      { type:'bar', label:'借入残高', data: rows.map(r=>-Math.round(r.debt)), backgroundColor:'#e7a3a3', stack:'a' },
-      { type:'line', label:'純資産', data: rows.map(r=>Math.round(r.net)), borderColor:'#b7892f', backgroundColor:'#b7892f', pointRadius:0, borderWidth:2.5, tension:.25 },
+      { type:'bar', label:'現預金', data: rows.map(r=>Math.round(r.cash)), backgroundColor:'#9a9a9a', stack:'a' },
+      { type:'bar', label:'積立・運用・保険', data: invest.map(Math.round), backgroundColor:'#ff9ecb', stack:'a' },
+      { type:'bar', label:'不動産', data: rows.map(r=>Math.round(r.estate)), backgroundColor:'#dcdcdc', stack:'a' },
+      { type:'bar', label:'借入残高', data: rows.map(r=>-Math.round(r.debt)), backgroundColor:'#5f6368', stack:'a' },
+      { type:'line', label:'純資産', data: rows.map(r=>Math.round(r.net)), borderColor:'#111', backgroundColor:'#111', pointRadius:0, borderWidth:2.5, tension:.25 },
     ]};
     note = '棒グラフは年末時点の資産構成（借入はマイナス側）、線は純資産（資産 − 借入）。横軸は夫の年齢。';
   } else {
     data = { labels, datasets: [
-      { type:'bar', label:'収入', data: rows.map(r=>Math.round(r.incTotal)), backgroundColor:'#2f855a' },
-      { type:'bar', label:'支出（積立含む）', data: rows.map(r=>Math.round(r.expTotal)), backgroundColor:'#e08f7a' },
-      { type:'line', label:'年間収支', data: rows.map(r=>Math.round(r.balance)), borderColor:'#1e3a5f', backgroundColor:'#1e3a5f', pointRadius:0, borderWidth:2, tension:.2 },
+      { type:'bar', label:'収入', data: rows.map(r=>Math.round(r.incTotal)), backgroundColor:'#ff9ecb' },
+      { type:'bar', label:'支出（積立含む）', data: rows.map(r=>Math.round(r.expTotal)), backgroundColor:'#9a9a9a' },
+      { type:'line', label:'年間収支', data: rows.map(r=>Math.round(r.balance)), borderColor:'#111', backgroundColor:'#111', pointRadius:0, borderWidth:2, tension:.2 },
     ]};
     note = '支出には積立額を含みます（積立は資産に振り替わるお金です）。退職金・満期受取の年は収入が大きく跳ねます。';
   }
